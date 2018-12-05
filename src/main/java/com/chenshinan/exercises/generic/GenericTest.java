@@ -1,6 +1,8 @@
 package com.chenshinan.exercises.generic;
 
 /**
+ * 测试java泛型
+ *
  * @author shinan.chen
  * @since 2018/12/3
  */
