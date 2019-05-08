@@ -34,7 +34,7 @@ public class Test {
 //                "Line 9\n" +
 //                "Line 10";
         String oldText = "A\nB\nC\nA\nB\nB\nA\nX";
-        String newText = "C\nB\nA\nB\nA\nC\nX2222";
+        String newText = "C\nB\nA\nB\nA\nC\nX1";
         TextComparator comparator = new TextComparator(oldText, newText);
         ChangeDto changeDto = new ChangeDto();
         changeDto.setChangeData(comparator.getChangesFromOriginal());

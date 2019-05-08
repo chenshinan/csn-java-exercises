@@ -66,10 +66,10 @@ public class MyersDiff<T> {
                     i = diagonal[kminus].i + 1;
                     prev = diagonal[kminus];
                 }
-                //根据i与k，计算出j
-                int j = i - k;
                 //上一步的低位数据不再存储在数组中（每个k只清空低位即可全部清空）
                 diagonal[kminus] = null;
+                //根据i与k，计算出j
+                int j = i - k;
                 //当前是diff节点
                 PathNode node = new DiffNode(i, j, prev);
                 //判断被比较的两个数组中，当前位置的数据是否相同，相同，则去到对角线位置
@@ -87,6 +87,7 @@ public class MyersDiff<T> {
                     return diagonal[kmiddle];
                 }
             }
+            diagonal[middle + d - 1] = null;
         }
         throw new Exception("could not find a diff path");
     }
