@@ -2,6 +2,8 @@ package com.chenshinan.exercises.javaDiffUtils.mydiff;
 
 import difflib.myers.Equalizer;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -22,6 +24,7 @@ public class MyersDiff<T> {
     public MyersDiff(Equalizer<T> equalizer) {
         this.equalizer = equalizer;
     }
+
     /**
      * 寻找最优路径
      */
@@ -46,13 +49,12 @@ public class MyersDiff<T> {
         for (int d = 0; d < MAX; d++) {
             //内层循环所处斜率，以2为步长，因为从所在位置走一步，斜率只会相差2
             for (int k = -d; k <= d; k += 2) {
-                //新增
                 //找出对应斜率所在的位置，以及它上一步的位置（高位与低位）
                 final int kmiddle = middle + k;
                 final int kplus = kmiddle + 1;
                 final int kminus = kmiddle - 1;
-
                 //若k为-d，则一定是从上往下走，即i相同
+                //若diagonal[kminus].i < diagonal[kplus].i，则最优路径一定是从上往下走，即i相同
                 int i;
                 PathNode prev;
                 if ((k == -d) || (k != d && diagonal[kminus].i < diagonal[kplus].i)) {
@@ -70,14 +72,16 @@ public class MyersDiff<T> {
                 diagonal[kminus] = null;
                 //当前是diff节点
                 PathNode node = new DiffNode(i, j, prev);
+                //判断被比较的两个数组中，当前位置的数据是否相同，相同，则去到对角线位置
+                while (i < N && j < M && equals(orig.get(i), rev.get(j))) {
+                    i++;
+                    j++;
+                }
                 //判断是否去到对角线位置，若是，则生成snack节点，前节点为diff节点
                 if (i > node.i)
                     node = new Snake(i, j, node);
-
-                //设置当前位置到数组中，改变
+                //设置当前位置到数组中
                 diagonal[kmiddle] = node;
-                //新增
-
                 //达到目标位置，返回当前node
                 if (i >= N && j >= M) {
                     return diagonal[kmiddle];
@@ -85,6 +89,42 @@ public class MyersDiff<T> {
             }
         }
         throw new Exception("could not find a diff path");
+    }
+
+    /**
+     * 打印diff
+     */
+    public void buildDiff(PathNode path, List<T> orig, List<T> rev) {
+        List<String> result = new ArrayList<>();
+        if (path == null)
+            throw new IllegalArgumentException("path is null");
+        if (orig == null)
+            throw new IllegalArgumentException("original sequence is null");
+        if (rev == null)
+            throw new IllegalArgumentException("revised sequence is null");
+        while (path != null && path.prev != null && path.prev.j >= 0) {
+            if (path.isSnake()) {
+                int endi = path.i;
+                int begini = path.prev.i;
+                for (int i = endi - 1; i >= begini; i--) {
+                    result.add("  " + orig.get(i));
+                }
+            } else {
+                int i = path.i;
+                int j = path.j;
+                int prei = path.prev.i;
+                if (prei < i) {
+                    result.add("- " + orig.get(i - 1));
+                } else {
+                    result.add("+ " + rev.get(j - 1));
+                }
+            }
+            path = path.prev;
+        }
+        Collections.reverse(result);
+        for (String line : result) {
+            System.out.println(line);
+        }
     }
 
     private boolean equals(T orig, T rev) {
