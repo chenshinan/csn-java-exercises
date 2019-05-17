@@ -41,7 +41,7 @@ public class TextComparator {
         return listOfChanges;
     }
 
-    private List<Delta> getDeltas() throws IOException {
+    public List<Delta> getDeltas() throws IOException {
 
         final List<String> originalFileLines = textToLines(original);
         final List<String> revisedFileLines = textToLines(revised);
