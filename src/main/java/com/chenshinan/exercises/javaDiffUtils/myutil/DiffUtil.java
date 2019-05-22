@@ -16,6 +16,22 @@ public class DiffUtil {
         return deltas2Dto(deltas);
     }
 
+    public static String parseObverse(List<TextDiffDTO> diffs) {
+        String target = "";
+        for (TextDiffDTO diff : diffs) {
+            target = applyTo(diff, target);
+        }
+        return target;
+    }
+
+    public static String parseReverse(List<TextDiffDTO> diffs, String latestContent) {
+        Collections.reverse(diffs);
+        for (TextDiffDTO diff : diffs) {
+            latestContent = restore(diff, latestContent);
+        }
+        return latestContent;
+    }
+
     public static String applyTo(TextDiffDTO diff, String original) {
         final List<String> originalFileLines = textToLines(original);
         List<String> result = new LinkedList<>(originalFileLines);
