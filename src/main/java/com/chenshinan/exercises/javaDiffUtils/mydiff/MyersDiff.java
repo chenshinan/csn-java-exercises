@@ -108,16 +108,16 @@ public class MyersDiff<T> {
                 int endi = path.i;
                 int begini = path.prev.i;
                 for (int i = endi - 1; i >= begini; i--) {
-                    result.add("  " + orig.get(i));
+                    result.add(" "+orig.get(i));
                 }
             } else {
                 int i = path.i;
                 int j = path.j;
                 int prei = path.prev.i;
                 if (prei < i) {
-                    result.add("- " + orig.get(i - 1));
+                    result.add("【删除】" + orig.get(i - 1));
                 } else {
-                    result.add("+ " + rev.get(j - 1));
+                    result.add("【增加】" + rev.get(j - 1));
                 }
             }
             path = path.prev;

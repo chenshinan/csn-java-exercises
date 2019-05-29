@@ -9,8 +9,10 @@ import java.util.List;
  */
 public class DiffMain {
     public static void main(String[] args) {
-        String oldText = "A\nB\nC\nA\nB\nB\nA\nX";
-        String newText = "C\nB\nA\nB\nA\nC\nY";
+//        String oldText = "A\nB\nC\nA\nB\nB\nA\nX";
+//        String newText = "C\nB\nA\nB\nA\nC\nY";
+        String oldText = "美\n国\n人";
+        String newText = "美\n国\n能\n力\n者";
         List<String> oldList = Arrays.asList(oldText.split("\\n"));
         List<String> newList = Arrays.asList(newText.split("\\n"));
         MyersDiff<String> myersDiff = new MyersDiff<>();
