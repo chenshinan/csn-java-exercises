@@ -2,11 +2,8 @@ package com.chenshinan.exercises.openhtmltopdf;
 
 import com.openhtmltopdf.bidi.support.ICUBidiReorderer;
 import com.openhtmltopdf.bidi.support.ICUBidiSplitter;
-import com.openhtmltopdf.extend.FSSupplier;
 import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
-import com.openhtmltopdf.outputdevice.helper.FontFaceFontSupplier;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
-import sun.nio.cs.Surrogate;
 
 import java.io.*;
 
@@ -16,11 +13,11 @@ import java.io.*;
  */
 public class PdfMain {
     public static void main(String[] args) {
-        try (OutputStream os = new FileOutputStream("./out10.pdf")) { // 输出的pdf
+        try (OutputStream os = new FileOutputStream("./out.pdf")) { // 输出的pdf
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
             //下面这个方法是要自己指定 字体文件   不然转出的pdf文件中 中文会变成####
-            builder.useFont(()->{
+            builder.useFont(() -> {
                 try {
                     return new FileInputStream("./NotoSansCJKtc-Regular.ttf");
                 } catch (FileNotFoundException e) {
@@ -28,7 +25,7 @@ public class PdfMain {
                 }
                 return null;
             }, "cjk", 400, BaseRendererBuilder.FontStyle.NORMAL, true); //第二个参数 一定要和文件名一样！！作用在html页面上
-            String nonLatinFonts = "" +
+            String style = "" +
                     "<style>\n" +
                     "@font-face {\n" +
                     "  font-family: 'simhei';\n" +
@@ -53,12 +50,12 @@ public class PdfMain {
                     "";
 
             String html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"/>\n" +
-                    "" +  nonLatinFonts +// add your stylesheets, scripts styles etc.
+                    "" + style +// add your stylesheets, scripts styles etc.
                     // uncomment line below for adding style for custom embedded fonts
                     // nonLatinFonts +
                     "</head><body>" + "中国人" + "\n" +
                     "</body></html>";
-            builder.withHtmlContent(html,"./root.htm");
+            builder.withHtmlContent(html, "./root.htm");
             builder.useUnicodeBidiSplitter(new ICUBidiSplitter.ICUBidiSplitterFactory());
             builder.useUnicodeBidiReorderer(new ICUBidiReorderer());
             builder.defaultTextDirection(BaseRendererBuilder.TextDirection.LTR);

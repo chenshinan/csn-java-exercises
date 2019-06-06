@@ -9,6 +9,8 @@ import com.vladsch.flexmark.profiles.pegdown.PegdownOptionsAdapter;
 import com.vladsch.flexmark.util.ast.Node;
 import com.vladsch.flexmark.util.options.MutableDataHolder;
 import org.apache.commons.io.IOUtils;
+import org.apache.pdfbox.pdmodel.encryption.AccessPermission;
+import org.apache.pdfbox.pdmodel.encryption.StandardProtectionPolicy;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -69,11 +71,16 @@ public class PdfConverter {
                 "1. numbered item 2   \n" +
                 "1. numbered item 3   \n" +
                 "    - bullet item 1   \n" +
-                "    - bullet item 2   \n" +
-                "    - bullet item 3   \n" +
+                "    - bullet `美国` 2   \n" +
+                "    - bullet `item` 3   \n" +
                 "        1. numbered 中国人   \n" +
                 "        1. numbered sub-item 2   \n" +
                 "        1. numbered sub-item 3   \n" +
+                "```java\n"+
+                "int x =1;\n"+
+                "```\n"+
+//                "![image](https://csn-images.oss-cn-shenzhen.aliyuncs.com/markdown/20190604195238.png)\n"+
+                "![image](https://gss0.baidu.com/-fo3dSag_xI4khGko9WTAnF6hhy/zhidao/wh%3D450%2C600%3B/sign=6f934d315bfbb2fb347e50167a7a0c92/a71ea8d3fd1f4134a17740122b1f95cad1c85e1d.jpg)"+
                 "    \n" +
                 "    ~~~info\n" +
                 "       with uneven indent\n" +
@@ -102,20 +109,45 @@ public class PdfConverter {
         // Google Noto fonts can be downloaded from https://www.google.com/get/noto/
         // `arialuni.ttf` from https://www.wfonts.com/font/arial-unicode-ms
 //        String url = "'file:///Users/chenshinan/Downloads/arialuni.ttf'";
-        String url = "'" + PdfConverter.class.getResource("/arialuni.ttf") + "'";
-        String nonLatinFonts = "<style>\n" +
+        String url = "'"+PdfConverter.class.getResource("/arialuni.ttf")+"'";
+        System.out.println(url);
+        String nonLatinFonts = "" +
+                "<style>\n" +
                 "@font-face {\n" +
-                "  font-family: 'arialuni';\n" +
-                "  src: url(" + url + ");\n" +
+                "  font-family: 'font';\n" +
+                "  src: url("+url+");\n" +
                 "}\n" +
-                "body {\n" +
-                "    font-family: 'arialuni';\n" +
+                "* {\n" +
+                "    font-family: 'font';\n" +
                 "}\n" +
-                "</style>";
-        html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">\n" + nonLatinFonts +
+                "var,\n" +
+                "code,\n" +
+                "kbd,\n" +
+                "pre {\n" +
+                "    font: 0.9em 'font';\n" +
+                "}\n" +
+                "code {\n" +
+                "    color:#c1788b;\n" +
+                "}\n" +
+                "pre {\n" +
+                "    background-color:#f5f7f8; padding:18px\n" +
+                "}\n" +
+                "pre code{\n" +
+                "    color:#000000;\n" +
+                "}\n" +
+                "img {\n" +
+                "    max-width: 100%\n" +
+                "}\n" +
+                "</style>\n" +
+                "";
+
+        html = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">\n" +
+                "" +  nonLatinFonts +// add your stylesheets, scripts styles etc.
+                // uncomment line below for adding style for custom embedded fonts
+                // nonLatinFonts +
                 "</head><body>" + html + "\n" +
                 "</body></html>";
 
-        PdfConverterExtension.exportToPdf("./out14.pdf", html, "", OPTIONS);
+        PdfConverterExtension.exportToPdf("./out2.pdf", html, "", OPTIONS);
     }
 }
