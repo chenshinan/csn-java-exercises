@@ -1968,7 +1968,7 @@ public class FlexmarkHtmlParser {
         }
 
         myTable = oldTable;
-        popState(out);
+        popState(null);
         return true;
     }
 
