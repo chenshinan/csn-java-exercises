@@ -12,7 +12,7 @@ import static org.junit.Assert.assertEquals;
  * @author shinan.chen
  * @since 2019/6/4
  */
-public class UtilMain {
+public class UtilHtml2mdMain {
     @Test
     public void testMultiValueMap() {
         LinkedMultiValueMap<String, String> map = new LinkedMultiValueMap<>();
