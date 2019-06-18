@@ -1695,6 +1695,7 @@ public class FlexmarkHtmlParser {
         }
 
         Node item;
+        label:
         while ((item = peek()) != null) {
             TagParam tagParam = getTagParam(item);
             if (tagParam != null) {
@@ -1711,7 +1712,7 @@ public class FlexmarkHtmlParser {
                         break;
                     default:
                         skip();
-                        break;
+                        break label;
                 }
             } else {
                 processWrapped(out, item, true, false);
