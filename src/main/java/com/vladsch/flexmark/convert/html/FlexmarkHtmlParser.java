@@ -886,7 +886,40 @@ public class FlexmarkHtmlParser {
                 if (textPrefix != null && textPrefix.length() > 0) out.append(textPrefix);
                 String text = ((TextNode) child).getWholeText();
                 String preparedText = prepareText(text);
-                out.append(preparedText);
+                out.append(preparedText).blankLine();
+                if (textSuffix != null && textSuffix.length() > 0) out.append(textSuffix);
+                skip();
+            } else if (child instanceof Element
+                    && ((Element) node).tagName().equalsIgnoreCase(TagType.P.name())
+                    && ((Element) child).tagName().equalsIgnoreCase("span")
+                    && child.childNodes().get(0) instanceof TextNode) {
+                if (textPrefix != null && textPrefix.length() > 0) out.append(textPrefix);
+                String text = ((TextNode) child.childNodes().get(0)).getWholeText();
+                String preparedText = prepareText(text);
+                char titleLevel = node.attr("class").charAt(0);
+                switch (titleLevel) {
+                    case '1':
+                        out.append("# " + preparedText).blankLine();
+                        break;
+                    case '2':
+                        out.append("## " + preparedText).blankLine();
+                        break;
+                    case '3':
+                        out.append("### " + preparedText).blankLine();
+                        break;
+                    case '4':
+                        out.append("#### " + preparedText).blankLine();
+                        break;
+                    case '5':
+                        out.append("##### " + preparedText).blankLine();
+                        break;
+                    case '6':
+                        out.append("###### " + preparedText).blankLine();
+                        break;
+                    default:
+                        out.append(preparedText);
+                        break;
+                }
                 if (textSuffix != null && textSuffix.length() > 0) out.append(textSuffix);
                 skip();
             } else if (child instanceof Element) {
@@ -1432,10 +1465,10 @@ public class FlexmarkHtmlParser {
             isItemParagraph = tagName.equalsIgnoreCase("li");
             isDefinitionItemParagraph = tagName.equalsIgnoreCase("dd");
         }
-        out.blankLineIf(!(isItemParagraph || isDefinitionItemParagraph));
+//        out.blankLineIf(!(isItemParagraph || isDefinitionItemParagraph));
         if (element.childNodeSize() == 0) {
             if (myOptions.brAsExtraBlankLines) {
-                out.append("<br />").blankLine();
+//                out.append("<br />").blankLine();
             }
         } else {
             processTextNodes(out, element, false);

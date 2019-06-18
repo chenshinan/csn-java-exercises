@@ -19,8 +19,6 @@ public class Html2mdMain {
         try {
             inputStream = new FileInputStream("./docx4j-out.html");
             String html = IOUtils.toString(inputStream, String.valueOf(Charsets.UTF_8));
-            html = html.replaceAll("<p class=\"a DocDefaults \">","");
-            html = html.replaceAll("</p>","<br>");
             String markdown = FlexmarkHtmlParser.parse(html);
             System.out.println(markdown);
 //            new FileOutputStream(new File("./docx4j-out.html"));
