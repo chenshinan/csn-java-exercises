@@ -892,7 +892,7 @@ public class FlexmarkHtmlParser {
             } else if (child instanceof Element
                     && ((Element) node).tagName().equalsIgnoreCase(TagType.P.name())
                     && ((Element) child).tagName().equalsIgnoreCase("span")
-                    && child.childNodes().get(0) instanceof TextNode) {
+                    && !child.childNodes().isEmpty()&&child.childNodes().get(0) instanceof TextNode) {
                 if (textPrefix != null && textPrefix.length() > 0) out.append(textPrefix);
                 String text = getText(child, "");
                 String preparedText = prepareText(text);
