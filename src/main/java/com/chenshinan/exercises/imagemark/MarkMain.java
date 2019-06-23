@@ -1,5 +1,7 @@
 package com.chenshinan.exercises.imagemark;
 
+import com.sun.image.codec.jpeg.JPEGCodec;
+import com.sun.image.codec.jpeg.JPEGImageEncoder;
 import org.apache.commons.io.IOUtils;
 import org.apache.pdfbox.util.Charsets;
 import org.slf4j.Logger;
@@ -10,6 +12,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -28,7 +31,7 @@ public class MarkMain {
     private static final float ALPHA = 1;
 
     public static void main(String[] args) {
-        String folderUrl = "/Users/chenshinan/Downloads/img-6.19";
+        String folderUrl = "/Users/chenshinan/Downloads/watermark";
         File folder = new File(folderUrl);
         long startTime = System.currentTimeMillis();
         OutputStream os = null;
@@ -37,6 +40,11 @@ public class MarkMain {
             String data = IOUtils.toString(new FileInputStream(folderUrl + "/data.txt"), Charsets.UTF_8);
             Map<String, ImageData> map = handleData(data);
             LOGGER.info("开始批量上码");
+            String outStr = folderUrl + "/out/";
+            File out = new File(outStr);
+            if(!out.exists()){
+                out.mkdir();
+            }
             for (File imageFolder : folder.listFiles()) {
                 if (imageFolder.isDirectory()) {
                     String imageNum = imageFolder.getName();
@@ -53,9 +61,9 @@ public class MarkMain {
                                 //获取原图的高度
                                 int height = image.getHeight(null);
                                 //图像颜色的设置
-                                BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+                                BufferedImage bufferedImage1 = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
                                 //创建Java绘图工具对象
-                                Graphics2D g = bufferedImage.createGraphics();
+                                Graphics2D g = bufferedImage1.createGraphics();
                                 //使用绘图工具对象将原图绘制到缓存图片对象
                                 g.drawImage(image, 0, 0, width, height, null);
                                 //绘制size
@@ -65,15 +73,25 @@ public class MarkMain {
                                 //释放工具
                                 g.dispose();
                                 //创建文件输出流，指向最终的目标文件
-//                                os = new FileOutputStream(folderUrl + "/" + imageNum + "/" + fildName);
-                                //5 创建图像文件编码工具类
-//                                JPEGImageEncoder en = JPEGCodec.createJPEGEncoder(os);
-                                //6 使用图像编码工具类，输出缓存图像到目标文件
-//                                en.encode(bufferedImage);
+                                String outFolderStr = folderUrl + "/out/" + imageNum;
+                                File outFolder = new File(outFolderStr);
+                                if(!outFolder.exists()){
+                                    outFolder.mkdir();
+                                }
+                                String url = outFolderStr + "/" + fildName;
+                                File file1 = new File(url);
+                                file1.createNewFile();
+                                os = new FileOutputStream(file1,false);
+                                //创建图像文件编码工具类
+                                JPEGImageEncoder en = JPEGCodec.createJPEGEncoder(os);
+                                //使用图像编码工具类，输出缓存图像到目标文件
+                                en.encode(bufferedImage1);
                                 count++;
                             }
                         }
                         LOGGER.info("完成【{}】批量上码", imageNum);
+                    }else{
+                        LOGGER.info("没找到【{}】的数据，跳过", imageNum);
                     }
                 }
 
