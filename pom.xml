@@ -211,8 +211,14 @@
 			<artifactId>org.apache.poi.xwpf.converter.xhtml</artifactId>
 			<version>1.0.6</version>
 		</dependency>
-	</dependencies>
 
+		<!--Java REST client API for Rocket.Chat-->
+		<dependency>
+			<groupId>com.github.daniel-sc</groupId>
+			<artifactId>rocketchat-modern-client</artifactId>
+			<version>0.0.7</version>
+		</dependency>
+	</dependencies>
 	<build>
 		<plugins>
 			<plugin>
