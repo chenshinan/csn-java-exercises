@@ -20,7 +20,7 @@ public class ChatMain {
             List<Room> rooms = client.getRooms().join();
             if(!rooms.isEmpty()){
                 //发送消息
-                ChatMessage msg = client.sendMessageExtendedParams("Your message", rooms.get(0).id, null, null, ":e-mail:", null).join();
+                ChatMessage msg = client.sendMessageExtendedParams("Your message", rooms.get(0).id, "alias", null, ":e-mail:", null).join();
                 System.out.println(msg);
                 //获取所有信息
                 String messages = client.getMessages(rooms.get(0).id,null,50,null).join();

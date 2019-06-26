@@ -23,7 +23,7 @@ public class Docx4jMain {
 
         WordprocessingMLPackage wordMLPackage;
         try {
-            wordMLPackage = Docx4J.load(new FileInputStream("./xx5.doc"));
+            wordMLPackage = Docx4J.load(new FileInputStream("./xx2.docx"));
             System.out.println(wordMLPackage);
             for (Object o : wordMLPackage.getMainDocumentPart().getContent()) {
                 System.out.println(o);
