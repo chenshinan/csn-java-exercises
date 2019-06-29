@@ -22,11 +22,13 @@ public class DataMain {
         OutputStream dataOut = null;
         OutputStream historyDataOut = null;
         OutputStream logOut = null;
+        String logs = "";
         try {
-            String logs = IOUtils.toString(new FileInputStream(folderUrl + "/log.txt"), Charsets.UTF_8);
+            logs = IOUtils.toString(new FileInputStream(folderUrl + "/log.txt"), Charsets.UTF_8);
+            System.out.println(logs);
             logOut = new FileOutputStream(folderUrl + "/log.txt");
-            String historyData = IOUtils.toString(new FileInputStream(folderUrl + "/dataHistoryData.txt"), Charsets.UTF_8);
-            historyDataOut = new FileOutputStream(folderUrl + "/dataHistoryData.txt");
+            String historyData = IOUtils.toString(new FileInputStream(folderUrl + "/historyData.txt"), Charsets.UTF_8);
+            historyDataOut = new FileOutputStream(folderUrl + "/historyData.txt");
             String prefixCodeStr = logs.split("\n")[0].split("：")[1];
             int globalPrefixCode = Integer.parseInt(prefixCodeStr);
             String origin = IOUtils.toString(new FileInputStream(folderUrl + "/origin.txt"), Charsets.UTF_8);
@@ -34,6 +36,7 @@ public class DataMain {
             String[] lines = origin.split("\\|\\|\\|");
             Map<String, Integer> imageNumMap = new HashMap<>();
             System.out.println("开始处理预数据");
+            String datas = "";
             for (String line : lines) {
                 line = line.trim();
                 if (line == null || "".equals(line)) {
@@ -52,34 +55,32 @@ public class DataMain {
                 }
 
                 String code = "编号" + prefixCode + String.valueOf(prefixCode * 3 - price);
-                String description = lineData[3];
+                String description = lineData[3].trim();
                 String newDescription = "\uD83C\uDE34️\uD83C\uDE34️\uD83C\uDE34️\uD83C\uDE34️\n"
                         + "批:" + price + "元\n"
                         + description + "\n"
                         + code;
                 String dataLine = "【" + imageNum + "】\n" + "||" + size + "||" + code + "||\n" + newDescription + "\n|||\n";
-                dataOut.write(dataLine.getBytes());
-
-                //输出历史记录
-                historyData = historyData + "=============================================\n" + dataLine;
-                historyDataOut.write(historyData.getBytes());
-
+                datas += dataLine;
                 //存储当前imageNum对应的prefixCode
                 imageNumMap.put(imageNumKey, prefixCode);
             }
             logOut.write(handleLogs(logs, String.valueOf(globalPrefixCode), imageNumMap.size(), imageNumMap.entrySet().stream().map(x -> String.valueOf(x.getValue())).collect(Collectors.joining("|"))).getBytes());
-            dataOut.close();
+            dataOut.write(datas.getBytes());
+            //输出历史记录
+            historyData = historyData + "=============================================\n" + datas;
+            historyDataOut.write(historyData.getBytes());
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            clodeOut(dataOut);
-            clodeOut(logOut);
-            clodeOut(historyDataOut);
+            closeOut(dataOut);
+            closeOut(logOut);
+            closeOut(historyDataOut);
+            System.out.println("完成数据处理");
         }
-        System.out.println("完成数据处理");
     }
 
-    private static void clodeOut(OutputStream out) {
+    private static void closeOut(OutputStream out) {
         if (out != null) {
             try {
                 out.close();
@@ -105,7 +106,7 @@ public class DataMain {
      */
     private static String handleLogs(String logs, String globalPrefixCode, Integer styleNum, String prefixCodeStr) {
         DateFormat df = new SimpleDateFormat("MM.dd");
-        String log = "日期" + df.format(new Date()) + "，共" + styleNum + "款" + "{imageNum}张图片，修图耗时{costTime}，编号前缀为" + prefixCodeStr;
+        String log = "日期" + df.format(new Date()) + "，共" + styleNum + "款" + "{imageNum}张图片，编号前缀为" + prefixCodeStr;
         String[] lines = logs.split("\n");
         lines[0] = "当前编码前缀：" + globalPrefixCode;
         List<String> list = new ArrayList<>(Arrays.asList(lines));

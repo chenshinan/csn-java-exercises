@@ -11,8 +11,9 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author shinan.chen
@@ -32,12 +33,9 @@ public class MarkMain {
         File folder = new File(folderUrl);
         long startTime = System.currentTimeMillis();
         OutputStream imageOut = null;
-        OutputStream logOut = null;
         int count = 0;
         try {
-            String logs = IOUtils.toString(new FileInputStream(folderUrl + "/log.txt"), Charsets.UTF_8);
             String data = IOUtils.toString(new FileInputStream(folderUrl + "/data.txt"), Charsets.UTF_8);
-            logOut = new FileOutputStream(folderUrl + "/log.txt");
             Map<String, ImageData> map = handleData(data);
             LOGGER.info("开始批量上码");
             String outStr = folderUrl + "/out/";
@@ -45,14 +43,23 @@ public class MarkMain {
             if (!out.exists()) {
                 out.mkdir();
             }
-            checkFileCount(folder, map);
-            for (File imageFolder : folder.listFiles()) {
+            checkFileCount(folder, map, folderUrl);
+            List<File> folders = Arrays.stream(folder.listFiles()).sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
+            for (File imageFolder : folders) {
                 if (imageFolder.isDirectory()) {
                     String imageNum = imageFolder.getName();
                     ImageData imageData = map.get(imageNum);
                     if (imageData != null) {
                         LOGGER.info("开始【{}】批量上码...", imageNum);
-                        for (File file : imageFolder.listFiles()) {
+                        //创建文件输出流，指向最终的目标文件
+                        String outFolderStr = folderUrl + "/out/" + imageNum;
+                        getFolder(outFolderStr);
+                        //生成主图文件夹
+                        String mainImgFolder = outFolderStr + "/主图";
+                        getFolder(mainImgFolder);
+                        int folderNum = 1;
+                        List<File> fileList = Arrays.stream(imageFolder.listFiles()).sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
+                        for (File file : fileList) {
                             String fildName = file.getName();
                             if (fildName.split("\\.")[1].equalsIgnoreCase("jpg")) {
                                 //创建图片缓存对象
@@ -74,21 +81,25 @@ public class MarkMain {
                                 printCode(g, height, width, imageData.getCode());
                                 //释放工具
                                 g.dispose();
-                                //创建文件输出流，指向最终的目标文件
-                                String outFolderStr = folderUrl + "/out/" + imageNum;
-                                File outFolder = new File(outFolderStr);
-                                if (!outFolder.exists()) {
-                                    outFolder.mkdir();
-                                }
-                                String url = outFolderStr + "/" + fildName;
-                                File file1 = new File(url);
-                                file1.createNewFile();
-                                imageOut = new FileOutputStream(file1, false);
-                                //创建图像文件编码工具类
-                                JPEGImageEncoder en = JPEGCodec.createJPEGEncoder(imageOut);
-                                //使用图像编码工具类，输出缓存图像到目标文件
-                                en.encode(bufferedImage1);
+                                //每个颜色单独文件夹
+                                String outFolderColorStr = outFolderStr + "/" + folderNum;
+                                getFolder(outFolderColorStr);
+                                //输出到单独文件夹
+                                String url1 = outFolderColorStr + "/" + fildName;
+                                outputImage(imageOut, bufferedImage1, url1);
+                                //输出到整体文件夹
+                                String url2 = outFolderStr + "/" + fildName;
+                                outputImage(imageOut, bufferedImage1, url2);
                                 count++;
+                                //如果9张了，则创建一个新文件夹
+                                if (count % 9 == 0) {
+                                    folderNum++;
+                                }
+                                //如果是第一张则再输出到单图文件夹
+                                if (count % 9 == 1) {
+                                    String url3 = mainImgFolder + "/" + fildName;
+                                    outputImage(imageOut, bufferedImage1, url3);
+                                }
                             }
                         }
                         LOGGER.info("完成【{}】批量上码", imageNum);
@@ -100,26 +111,10 @@ public class MarkMain {
             }
             Float time = (float) (System.currentTimeMillis() - startTime) / 1000;
             LOGGER.info("完成所有批量上码，共计：{}张图片，耗时：{}s", count, time);
-            logs = logs.replace("{imageNum}", String.valueOf(count));
-            logs = logs.replace("{costTime}", String.valueOf(time));
-            logOut.write(logs.getBytes());
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage());
         } finally {
-            if (imageOut != null) {
-                try {
-                    imageOut.close();    //关闭流
-                } catch (Exception e2) {
-                    e2.printStackTrace();
-                }
-            }
-            if (logOut != null) {
-                try {
-                    logOut.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            closeOut(imageOut);
         }
     }
 
@@ -222,19 +217,59 @@ public class MarkMain {
         return map;
     }
 
-    private static void checkFileCount(File folder, Map<String, ImageData> map) {
+    private static void checkFileCount(File folder, Map<String, ImageData> map, String folderUrl) throws IOException {
         LOGGER.info("开始校验文件夹图片数量，必须为9的倍数");
+        int sum = 0;
         for (File imageFolder : folder.listFiles()) {
             if (imageFolder.isDirectory()) {
                 String imageNum = imageFolder.getName();
                 ImageData imageData = map.get(imageNum);
                 if (imageData != null) {
-                    if (imageFolder.listFiles().length % 9 != 0) {
-                        throw new IllegalArgumentException("图片数量必须为9的倍数");
+                    int count = 0;
+                    for (File file : imageFolder.listFiles()) {
+                        if (file.getName().split("\\.")[1].equalsIgnoreCase("jpg")) {
+                            count++;
+                            sum++;
+                        }
+                    }
+                    if (count % 9 != 0) {
+                        throw new IllegalArgumentException(imageNum + "图片数量必须为9的倍数");
                     }
                 }
             }
         }
+        String logs = IOUtils.toString(new FileInputStream(folderUrl + "/log.txt"), Charsets.UTF_8);
+        logs = logs.replace("{imageNum}", String.valueOf(sum));
+        OutputStream logOut = new FileOutputStream(folderUrl + "/log.txt");
+        logOut.write(logs.getBytes());
+        logOut.close();
         LOGGER.info("完成文件夹图片数量校验");
+    }
+
+    private static void getFolder(String url) {
+        File folder = new File(url);
+        if (!folder.exists()) {
+            folder.mkdir();
+        }
+    }
+
+    private static void outputImage(OutputStream imageOut, BufferedImage bufferedImage, String url) throws IOException {
+        File file1 = new File(url);
+        file1.createNewFile();
+        imageOut = new FileOutputStream(file1, false);
+        //创建图像文件编码工具类
+        JPEGImageEncoder en = JPEGCodec.createJPEGEncoder(imageOut);
+        //使用图像编码工具类，输出缓存图像到目标文件
+        en.encode(bufferedImage);
+    }
+
+    private static void closeOut(OutputStream out) {
+        if (out != null) {
+            try {
+                out.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
