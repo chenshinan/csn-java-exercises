@@ -45,6 +45,7 @@ public class MarkMain {
             if (!out.exists()) {
                 out.mkdir();
             }
+            checkFileCount(folder, map);
             for (File imageFolder : folder.listFiles()) {
                 if (imageFolder.isDirectory()) {
                     String imageNum = imageFolder.getName();
@@ -221,5 +222,19 @@ public class MarkMain {
         return map;
     }
 
-
+    private static void checkFileCount(File folder, Map<String, ImageData> map) {
+        LOGGER.info("开始校验文件夹图片数量，必须为9的倍数");
+        for (File imageFolder : folder.listFiles()) {
+            if (imageFolder.isDirectory()) {
+                String imageNum = imageFolder.getName();
+                ImageData imageData = map.get(imageNum);
+                if (imageData != null) {
+                    if (imageFolder.listFiles().length % 9 != 0) {
+                        throw new IllegalArgumentException("图片数量必须为9的倍数");
+                    }
+                }
+            }
+        }
+        LOGGER.info("完成文件夹图片数量校验");
+    }
 }
