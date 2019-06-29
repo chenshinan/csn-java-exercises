@@ -20,10 +20,13 @@ public class DataMain {
     public static void main(String[] args) {
         String folderUrl = "/Users/chenshinan/Downloads/watermark";
         OutputStream dataOut = null;
+        OutputStream historyDataOut = null;
         OutputStream logOut = null;
         try {
             String logs = IOUtils.toString(new FileInputStream(folderUrl + "/log.txt"), Charsets.UTF_8);
             logOut = new FileOutputStream(folderUrl + "/log.txt");
+            String historyData = IOUtils.toString(new FileInputStream(folderUrl + "/dataHistoryData.txt"), Charsets.UTF_8);
+            historyDataOut = new FileOutputStream(folderUrl + "/dataHistoryData.txt");
             String prefixCodeStr = logs.split("\n")[0].split("：")[1];
             int globalPrefixCode = Integer.parseInt(prefixCodeStr);
             String origin = IOUtils.toString(new FileInputStream(folderUrl + "/origin.txt"), Charsets.UTF_8);
@@ -57,6 +60,10 @@ public class DataMain {
                 String dataLine = "【" + imageNum + "】\n" + "||" + size + "||" + code + "||\n" + newDescription + "\n|||\n";
                 dataOut.write(dataLine.getBytes());
 
+                //输出历史记录
+                historyData = historyData + "=============================================\n" + dataLine;
+                historyDataOut.write(historyData.getBytes());
+
                 //存储当前imageNum对应的prefixCode
                 imageNumMap.put(imageNumKey, prefixCode);
             }
@@ -65,22 +72,21 @@ public class DataMain {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            if (dataOut != null) {
-                try {
-                    dataOut.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (logOut != null) {
-                try {
-                    logOut.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            clodeOut(dataOut);
+            clodeOut(logOut);
+            clodeOut(historyDataOut);
         }
         System.out.println("完成数据处理");
+    }
+
+    private static void clodeOut(OutputStream out) {
+        if (out != null) {
+            try {
+                out.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private static String getImageNumKey(String imageNum) {
