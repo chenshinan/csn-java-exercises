@@ -10,10 +10,7 @@ import org.slf4j.LoggerFactory;
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,15 +31,18 @@ public class MarkMain {
         String folderUrl = "/Users/chenshinan/Downloads/watermark";
         File folder = new File(folderUrl);
         long startTime = System.currentTimeMillis();
-        OutputStream os = null;
+        OutputStream imageOut = null;
+        OutputStream logOut = null;
         int count = 0;
         try {
+            String logs = IOUtils.toString(new FileInputStream(folderUrl + "/log.txt"), Charsets.UTF_8);
             String data = IOUtils.toString(new FileInputStream(folderUrl + "/data.txt"), Charsets.UTF_8);
+            logOut = new FileOutputStream(folderUrl + "/log.txt");
             Map<String, ImageData> map = handleData(data);
             LOGGER.info("开始批量上码");
             String outStr = folderUrl + "/out/";
             File out = new File(outStr);
-            if(!out.exists()){
+            if (!out.exists()) {
                 out.mkdir();
             }
             for (File imageFolder : folder.listFiles()) {
@@ -50,6 +50,7 @@ public class MarkMain {
                     String imageNum = imageFolder.getName();
                     ImageData imageData = map.get(imageNum);
                     if (imageData != null) {
+                        LOGGER.info("开始【{}】批量上码...", imageNum);
                         for (File file : imageFolder.listFiles()) {
                             String fildName = file.getName();
                             if (fildName.split("\\.")[1].equalsIgnoreCase("jpg")) {
@@ -75,37 +76,47 @@ public class MarkMain {
                                 //创建文件输出流，指向最终的目标文件
                                 String outFolderStr = folderUrl + "/out/" + imageNum;
                                 File outFolder = new File(outFolderStr);
-                                if(!outFolder.exists()){
+                                if (!outFolder.exists()) {
                                     outFolder.mkdir();
                                 }
                                 String url = outFolderStr + "/" + fildName;
                                 File file1 = new File(url);
                                 file1.createNewFile();
-                                os = new FileOutputStream(file1,false);
+                                imageOut = new FileOutputStream(file1, false);
                                 //创建图像文件编码工具类
-                                JPEGImageEncoder en = JPEGCodec.createJPEGEncoder(os);
+                                JPEGImageEncoder en = JPEGCodec.createJPEGEncoder(imageOut);
                                 //使用图像编码工具类，输出缓存图像到目标文件
                                 en.encode(bufferedImage1);
                                 count++;
                             }
                         }
                         LOGGER.info("完成【{}】批量上码", imageNum);
-                    }else{
+                    } else {
                         LOGGER.info("没找到【{}】的数据，跳过", imageNum);
                     }
                 }
 
             }
-            LOGGER.info("完成所有批量上码，共计：{}张图片，耗时：{}s", count, (float) (System.currentTimeMillis() - startTime) / 1000);
-
+            Float time = (float) (System.currentTimeMillis() - startTime) / 1000;
+            LOGGER.info("完成所有批量上码，共计：{}张图片，耗时：{}s", count, time);
+            logs = logs.replace("{imageNum}", String.valueOf(count));
+            logs = logs.replace("{costTime}", String.valueOf(time));
+            logOut.write(logs.getBytes());
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            if (os != null) {
+            if (imageOut != null) {
                 try {
-                    os.close();    //关闭流
+                    imageOut.close();    //关闭流
                 } catch (Exception e2) {
                     e2.printStackTrace();
+                }
+            }
+            if (logOut != null) {
+                try {
+                    logOut.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
