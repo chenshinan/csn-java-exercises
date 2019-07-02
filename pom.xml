@@ -218,6 +218,21 @@
 			<artifactId>rocketchat-modern-client</artifactId>
 			<version>0.0.7</version>
 		</dependency>
+		<!--elasticsearch client-->
+		<dependency>
+			<groupId>org.elasticsearch.client</groupId>
+			<artifactId>elasticsearch-rest-high-level-client</artifactId>
+			<version>7.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.elasticsearch</groupId>
+			<artifactId>elasticsearch</artifactId>
+			<version>7.2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
 	</dependencies>
 	<build>
 		<plugins>
@@ -227,6 +242,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
-
 </project>
