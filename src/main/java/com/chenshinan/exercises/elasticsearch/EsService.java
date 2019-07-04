@@ -4,6 +4,8 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -14,9 +16,12 @@ import org.elasticsearch.action.support.replication.ReplicationResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.text.Text;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
@@ -46,12 +51,80 @@ public class EsService {
     public SearchResponse search(String index, String searchStr) {
         SearchRequest searchRequest = new SearchRequest(index);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
-        sourceBuilder.query(QueryBuilders.termQuery("content", searchStr));
+        TermQueryBuilder x = new TermQueryBuilder("project_id", "28");
+        BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
+        boolBuilder.filter(x);
+        boolBuilder.should(QueryBuilders.matchQuery("title", searchStr))
+                .should(QueryBuilders.matchQuery("content", searchStr));
+        sourceBuilder.query(boolBuilder);
+        sourceBuilder.from(0);
+        sourceBuilder.size(1000);
         sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
 
         // 高亮设置
         HighlightBuilder highlightBuilder = new HighlightBuilder();
-        highlightBuilder.requireFieldMatch(false).field("title").field("content")
+        highlightBuilder.requireFieldMatch(true).field("title").field("content")
+                .preTags("<strong>").postTags("</strong>");
+
+        sourceBuilder.highlighter(highlightBuilder);
+        searchRequest.source(sourceBuilder);
+        SearchResponse response = null;
+        try {
+            response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+            Arrays.stream(response.getHits().getHits())
+                    .forEach(hit -> {
+                        System.out.println(hit.getId());
+//                        System.out.println(hit.getIndex());
+//                        System.out.println(hit.getSourceAsString());
+//                        //取高亮结果
+//                        Map<String, HighlightField> highlightFields = hit.getHighlightFields();
+//                        HighlightField highlight = highlightFields.get("content");
+//                        if (highlight != null) {
+//                            Text[] fragments = highlight.fragments();  //多值的字段会有多个值
+//                            if (fragments != null) {
+//                                String fragmentString = fragments[0].string();
+//                                LOGGER.info("content highlight : " + fragmentString);
+//                                //可用高亮字符串替换上面sourceAsMap中的对应字段返回到上一级调用
+//                                //sourceAsMap.put("content", fragmentString);
+//                            }
+//                        }
+                    });
+            System.out.println(response.getHits());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    public SearchResponse searchAll(String index) {
+        SearchRequest searchRequest = new SearchRequest(index);
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        sourceBuilder.query(QueryBuilders.matchAllQuery());
+        sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
+
+        SearchResponse response = null;
+        try {
+            response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+            System.out.println(response.getHits().getTotalHits().value);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    public SearchResponse searchTest(String index, String searchStr) {
+        SearchRequest searchRequest = new SearchRequest(index);
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+        TermQueryBuilder x = new TermQueryBuilder("title", "csn");
+        BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
+        boolBuilder.filter(x);
+        boolBuilder.must(QueryBuilders.matchQuery("content", searchStr));
+        sourceBuilder.query(boolBuilder);
+        sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
+
+        // 高亮设置
+        HighlightBuilder highlightBuilder = new HighlightBuilder();
+        highlightBuilder.requireFieldMatch(true).field("content")
                 .preTags("<strong>").postTags("</strong>");
 
         sourceBuilder.highlighter(highlightBuilder);
@@ -83,12 +156,11 @@ public class EsService {
         return response;
     }
 
-    @Deprecated
-    public CreateIndexResponse createIndex() {
+    public CreateIndexResponse createIndex(String index) {
         // 1、创建 创建索引request
-        CreateIndexRequest request = new CreateIndexRequest("knowledge");
+        CreateIndexRequest request = new CreateIndexRequest(index);
         // 2、设置索引的settings，设置默认分词
-//        request.settings(Settings.builder().put("analysis.analyzer.default.tokenizer", "ik_smart"));
+        request.settings(Settings.builder().put("analysis.analyzer.default.tokenizer", "ik_smart"));
 
         // 3、设置索引的mappings
 //        request.mapping("_page",
@@ -302,5 +374,24 @@ public class EsService {
             };
             client.getAsync(request, listener);
             */
+    }
+
+    public DeleteResponse deletePage(String index, Long id) {
+        DeleteRequest request = new DeleteRequest(index, String.valueOf(id));
+        DeleteResponse deleteResponse = null;
+        try {
+            // 同步请求
+            deleteResponse = highLevelClient.delete(request, RequestOptions.DEFAULT);
+        } catch (ElasticsearchException e) {
+            LOGGER.error("删除文档异常", e);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        //4、处理响应
+        if (deleteResponse != null) {
+            LOGGER.info(deleteResponse.toString());
+        }
+        return deleteResponse;
     }
 }

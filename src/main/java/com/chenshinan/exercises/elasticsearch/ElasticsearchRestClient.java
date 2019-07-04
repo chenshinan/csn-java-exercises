@@ -26,7 +26,7 @@ public class ElasticsearchRestClient {
     private static final String HTTP_SCHEME = "http";
 
     /**
-     * 使用冒号隔开ip和端口1
+     * 使用冒号隔开ip和端口
      */
     @Value("${elasticsearch.ip}")
     String[] ipAddress;
