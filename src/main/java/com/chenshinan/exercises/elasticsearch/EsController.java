@@ -2,6 +2,7 @@ package com.chenshinan.exercises.elasticsearch;
 
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.explain.ExplainResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -39,10 +40,10 @@ public class EsController {
     }
 
     @GetMapping(value = "/searchAll")
-    public ResponseEntity<SearchResponse> searchAll(@RequestParam String index) {
-        return Optional.ofNullable(esService.searchAll(index))
-                .map(result -> new ResponseEntity<>(result, HttpStatus.OK))
-                .orElseThrow(() -> new IllegalArgumentException("error.elasticsearch.searchAll"));
+    public ResponseEntity searchAll(@RequestParam String index,
+                                    @RequestParam String searchStr) {
+        esService.searchAll(index, searchStr);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @GetMapping(value = "/createPage")
@@ -77,4 +78,38 @@ public class EsController {
                 .map(result -> new ResponseEntity<>(result, HttpStatus.OK))
                 .orElseThrow(() -> new IllegalArgumentException("error.elasticsearch.deletePage"));
     }
+
+    @GetMapping(value = "/searchById")
+    public ResponseEntity<SearchResponse> searchById(@RequestParam String index,
+                                                     @RequestParam Long id,
+                                                     @RequestParam String searchStr) {
+        return Optional.ofNullable(esService.searchById(index, id, searchStr))
+                .map(result -> new ResponseEntity<>(result, HttpStatus.OK))
+                .orElseThrow(() -> new IllegalArgumentException("error.elasticsearch.searchById"));
+    }
+
+    @GetMapping(value = "/indexExist")
+    public ResponseEntity<Boolean> indexExist(@RequestParam String index) {
+        return Optional.ofNullable(esService.indexExist(index))
+                .map(result -> new ResponseEntity<>(result, HttpStatus.OK))
+                .orElseThrow(() -> new IllegalArgumentException("error.elasticsearch.indexExist"));
+    }
+
+    @GetMapping(value = "/batchCreatePage")
+    public ResponseEntity batchCreatePage(@RequestParam String index,
+                                          @RequestParam Long id) {
+        esService.batchCreatePage(index, id);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping(value = "/explain")
+    public ResponseEntity<ExplainResponse> explain(@RequestParam String index,
+                                                   @RequestParam Long id,
+                                                   @RequestParam String searchStr) {
+        return Optional.ofNullable(esService.explain(index, id, searchStr))
+                .map(result -> new ResponseEntity<>(result, HttpStatus.OK))
+                .orElseThrow(() -> new IllegalArgumentException("error.elasticsearch.explain"));
+    }
+
+
 }

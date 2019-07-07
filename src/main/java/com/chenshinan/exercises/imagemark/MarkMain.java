@@ -23,7 +23,7 @@ public class MarkMain {
     public static final Logger LOGGER = LoggerFactory.getLogger(MarkMain.class);
     private static final String FONT_NAME = "宋体";
     private static final int FONT_STYLE = Font.BOLD;
-    private static final int FONT_SIZE = 200;
+    private static final int FONT_SIZE = 80;
     private static final Color SIZE_FONT_COLOR = Color.decode("#000000");
     private static final Color CODE_FONT_COLOR = Color.decode("#28E613");
     private static final float ALPHA = 1;

@@ -4,25 +4,35 @@ import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.bulk.BackoffPolicy;
+import org.elasticsearch.action.bulk.BulkProcessor;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.explain.ExplainRequest;
+import org.elasticsearch.action.explain.ExplainResponse;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.*;
 import org.elasticsearch.action.support.replication.ReplicationResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.text.Text;
+import org.elasticsearch.common.unit.ByteSizeUnit;
+import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.TermQueryBuilder;
 import org.elasticsearch.rest.RestStatus;
+import org.elasticsearch.search.Scroll;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.fetch.subphase.FetchSourceContext;
 import org.elasticsearch.search.fetch.subphase.highlight.HighlightBuilder;
@@ -33,10 +43,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+
+import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
 
 /**
  * @author shinan.chen
@@ -54,8 +64,12 @@ public class EsService {
         TermQueryBuilder x = new TermQueryBuilder("project_id", "28");
         BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
         boolBuilder.filter(x);
-        boolBuilder.should(QueryBuilders.matchQuery("title", searchStr))
-                .should(QueryBuilders.matchQuery("content", searchStr));
+        //分词搜索
+        boolBuilder.must(matchQuery("content", searchStr));
+        //短语搜索
+//        boolBuilder.must(QueryBuilders.matchPhraseQuery("content", searchStr));
+        //短语搜索，最后一个词前缀模糊匹配
+//        boolBuilder.must(QueryBuilders.matchPhrasePrefixQuery("content", searchStr));
         sourceBuilder.query(boolBuilder);
         sourceBuilder.from(0);
         sourceBuilder.size(1000);
@@ -65,6 +79,10 @@ public class EsService {
         HighlightBuilder highlightBuilder = new HighlightBuilder();
         highlightBuilder.requireFieldMatch(true).field("title").field("content")
                 .preTags("<strong>").postTags("</strong>");
+        highlightBuilder.noMatchSize(100);
+        highlightBuilder.highlightFilter(true);
+//        highlightBuilder.forceSource(true);
+//        highlightBuilder.requireFieldMatch(false);
 
         sourceBuilder.highlighter(highlightBuilder);
         searchRequest.source(sourceBuilder);
@@ -96,7 +114,7 @@ public class EsService {
         return response;
     }
 
-    public SearchResponse searchAll(String index) {
+    public SearchResponse searchAll2(String index) {
         SearchRequest searchRequest = new SearchRequest(index);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         sourceBuilder.query(QueryBuilders.matchAllQuery());
@@ -118,7 +136,7 @@ public class EsService {
         TermQueryBuilder x = new TermQueryBuilder("title", "csn");
         BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
         boolBuilder.filter(x);
-        boolBuilder.must(QueryBuilders.matchQuery("content", searchStr));
+        boolBuilder.must(matchQuery("content", searchStr));
         sourceBuilder.query(boolBuilder);
         sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
 
@@ -321,7 +339,6 @@ public class EsService {
             GetResponse getResponse = client.get(request);
             String message = getResponse.getField("message").getValue();*/
 
-
         //3、发送请求
         GetResponse getResponse = null;
         try {
@@ -393,5 +410,162 @@ public class EsService {
             LOGGER.info(deleteResponse.toString());
         }
         return deleteResponse;
+    }
+
+    public SearchResponse searchById(String index, Long id, String searchStr) {
+        SearchRequest searchRequest = new SearchRequest(index);
+        SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+//        TermQueryBuilder x = new TermQueryBuilder("project_id", "28");
+        BoolQueryBuilder boolBuilder = new BoolQueryBuilder();
+//        boolBuilder.filter(x);
+        boolBuilder.filter(QueryBuilders.termQuery("id", String.valueOf(id)));
+        boolBuilder.must(QueryBuilders.boolQuery().should(matchQuery("title", searchStr))
+                .should(matchQuery("content", searchStr)));
+        sourceBuilder.query(boolBuilder);
+        sourceBuilder.timeout(new TimeValue(60, TimeUnit.SECONDS));
+        // 高亮设置
+        HighlightBuilder highlightBuilder = new HighlightBuilder();
+        highlightBuilder.requireFieldMatch(true).field("title").field("content")
+                .preTags("<strong>").postTags("</strong>");
+        highlightBuilder.noMatchSize(100);
+        highlightBuilder.highlightFilter(true);
+        highlightBuilder.fragmentSize(10000);
+        highlightBuilder.numOfFragments(1);
+//        highlightBuilder.forceSource(true);
+//        highlightBuilder.requireFieldMatch(false);
+
+        sourceBuilder.highlighter(highlightBuilder);
+        searchRequest.source(sourceBuilder);
+        SearchResponse response = null;
+        try {
+            response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+            Arrays.stream(response.getHits().getHits())
+                    .forEach(hit -> {
+                        System.out.println(hit.getId());
+//                        System.out.println(hit.getIndex());
+//                        System.out.println(hit.getSourceAsString());
+//                        //取高亮结果
+//                        Map<String, HighlightField> highlightFields = hit.getHighlightFields();
+//                        HighlightField highlight = highlightFields.get("content");
+//                        if (highlight != null) {
+//                            Text[] fragments = highlight.fragments();  //多值的字段会有多个值
+//                            if (fragments != null) {
+//                                String fragmentString = fragments[0].string();
+//                                LOGGER.info("content highlight : " + fragmentString);
+//                                //可用高亮字符串替换上面sourceAsMap中的对应字段返回到上一级调用
+//                                //sourceAsMap.put("content", fragmentString);
+//                            }
+//                        }
+                    });
+            System.out.println(response.getHits());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    public Boolean indexExist(String index) {
+        GetIndexRequest request;
+        Boolean exists = false;
+        try {
+            request = new GetIndexRequest(index);
+            exists = highLevelClient.indices().exists(request, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return exists;
+    }
+
+    public void batchCreatePage(String index, Long id) {
+        BulkProcessor.Listener listener = new BulkProcessor.Listener() {
+            @Override
+            public void beforeBulk(long executionId, BulkRequest request) {
+                LOGGER.info("batchCreatePage {} time, starting...", request.numberOfActions());
+            }
+
+            @Override
+            public void afterBulk(long executionId, BulkRequest request,
+                                  BulkResponse response) {
+                LOGGER.info("batchCreatePage {} time, complete", request.numberOfActions());
+            }
+
+            @Override
+            public void afterBulk(long executionId, BulkRequest request,
+                                  Throwable failure) {
+                LOGGER.error("batchCreatePage {} time, error:{}", request.numberOfActions(), failure.getMessage());
+            }
+        };
+
+        BulkProcessor bulkProcessor = BulkProcessor.builder(
+                (request, bulkListener) ->
+                        highLevelClient.bulkAsync(request, RequestOptions.DEFAULT, bulkListener),
+                listener)
+                .setBulkActions(500)
+                .setBulkSize(new ByteSizeValue(1L, ByteSizeUnit.MB))
+                .setConcurrentRequests(0)
+                .setFlushInterval(TimeValue.timeValueSeconds(10L))
+                .setBackoffPolicy(BackoffPolicy
+                        .constantBackoff(TimeValue.timeValueSeconds(1L), 3))
+                .build();
+
+        Map<String, Object> jsonMap = new HashMap<>(2);
+        jsonMap.put("title", "testBath");
+        jsonMap.put("content", "testBath");
+        IndexRequest one = new IndexRequest(index).id(String.valueOf(id))
+                .source(jsonMap);
+        IndexRequest two = new IndexRequest(index).id(String.valueOf(id + 1))
+                .source(jsonMap);
+        IndexRequest three = new IndexRequest(index).id(String.valueOf(id + 2))
+                .source(jsonMap);
+        bulkProcessor.add(one);
+        bulkProcessor.add(two);
+        bulkProcessor.add(three);
+    }
+
+    public ExplainResponse explain(String index, Long id, String searchStr) {
+        ExplainRequest request = new ExplainRequest(index, String.valueOf(id));
+        request.query(matchQuery("content", searchStr));
+        ExplainResponse response = null;
+        try {
+            response = highLevelClient.explain(request, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return response;
+    }
+
+    public void searchAll(String index, String searchStr) {
+        final Scroll scroll = new Scroll(TimeValue.timeValueMinutes(1L));
+        SearchRequest searchRequest = new SearchRequest(index);
+        searchRequest.scroll(scroll);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(matchQuery("content", searchStr));
+        searchSourceBuilder.size(10);
+        searchRequest.source(searchSourceBuilder);
+
+        SearchResponse response;
+        try {
+            response = highLevelClient.search(searchRequest, RequestOptions.DEFAULT);
+            String scrollId = response.getScrollId();
+            SearchHit[] searchHits = response.getHits().getHits();
+            List<SearchHit> hits = new ArrayList<>();
+            hits.addAll(Arrays.asList(searchHits));
+            while (searchHits != null && searchHits.length > 0) {
+                SearchScrollRequest scrollRequest = new SearchScrollRequest(scrollId);
+                scrollRequest.scroll(scroll);
+                response = highLevelClient.scroll(scrollRequest, RequestOptions.DEFAULT);
+                scrollId = response.getScrollId();
+                searchHits = response.getHits().getHits();
+                hits.addAll(Arrays.asList(searchHits));
+            }
+
+            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+            clearScrollRequest.addScrollId(scrollId);
+            ClearScrollResponse clearScrollResponse = highLevelClient.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+            boolean succeeded = clearScrollResponse.isSucceeded();
+            System.out.println(succeeded+":"+hits.size());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
