@@ -23,10 +23,10 @@ public class MarkMain {
     public static final Logger LOGGER = LoggerFactory.getLogger(MarkMain.class);
     private static final String FONT_NAME = "宋体";
     private static final int FONT_STYLE = Font.BOLD;
-    private static final int FONT_SIZE = 80;
     private static final Color SIZE_FONT_COLOR = Color.decode("#000000");
     private static final Color CODE_FONT_COLOR = Color.decode("#28E613");
     private static final float ALPHA = 1;
+    private static final List<String> functions = Arrays.asList(FunctionType.WATERMARK, FunctionType.SPLIT_FOLDER, FunctionType.CHECK_COUNT);
 
     public static void main(String[] args) {
         String folderUrl = "/Users/chenshinan/Downloads/watermark";
@@ -43,7 +43,9 @@ public class MarkMain {
             if (!out.exists()) {
                 out.mkdir();
             }
-            checkFileCount(folder, map, folderUrl);
+            if (functions.contains(FunctionType.CHECK_COUNT)) {
+                checkFileCount(folder, map, folderUrl);
+            }
             List<File> folders = Arrays.stream(folder.listFiles()).sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
             for (File imageFolder : folders) {
                 if (imageFolder.isDirectory()) {
@@ -75,30 +77,39 @@ public class MarkMain {
                                 Graphics2D g = bufferedImage1.createGraphics();
                                 //使用绘图工具对象将原图绘制到缓存图片对象
                                 g.drawImage(image, 0, 0, width, height, null);
-                                //绘制size
-                                printSize(g, height, width, imageData.getSize());
-                                //绘制code
-                                printCode(g, height, width, imageData.getCode());
+                                if (functions.contains(FunctionType.WATERMARK)) {
+                                    //如果为x说明不需要加水印
+                                    if (!imageData.getSize().equals("x")) {
+                                        //由于w/h/fs=6000/4000/200=3000/2000/100，所以fs=w/30
+                                        int fontSize = width / 30;
+                                        //绘制size
+                                        printSize(g, height, width, imageData.getSize(), fontSize);
+                                        //绘制code
+                                        printCode(g, height, width, imageData.getCode(), fontSize);
+                                    }
+                                }
                                 //释放工具
                                 g.dispose();
-                                //每个颜色单独文件夹
-                                String outFolderColorStr = outFolderStr + "/" + folderNum;
-                                getFolder(outFolderColorStr);
-                                //输出到单独文件夹
-                                String url1 = outFolderColorStr + "/" + fildName;
-                                outputImage(imageOut, bufferedImage1, url1);
                                 //输出到整体文件夹
                                 String url2 = outFolderStr + "/" + fildName;
                                 outputImage(imageOut, bufferedImage1, url2);
                                 count++;
-                                //如果9张了，则创建一个新文件夹
-                                if (count % 9 == 0) {
-                                    folderNum++;
-                                }
-                                //如果是第一张则再输出到单图文件夹
-                                if (count % 9 == 1) {
-                                    String url3 = mainImgFolder + "/" + fildName;
-                                    outputImage(imageOut, bufferedImage1, url3);
+                                if (functions.contains(FunctionType.SPLIT_FOLDER)) {
+                                    //每个颜色单独文件夹
+                                    String outFolderColorStr = outFolderStr + "/" + folderNum;
+                                    getFolder(outFolderColorStr);
+                                    //输出到单独文件夹
+                                    String url1 = outFolderColorStr + "/" + fildName;
+                                    outputImage(imageOut, bufferedImage1, url1);
+                                    //如果9张了，则创建一个新文件夹
+                                    if (count % 9 == 0) {
+                                        folderNum++;
+                                    }
+                                    //如果是第一张则再输出到单图文件夹
+                                    if (count % 9 == 1) {
+                                        String url3 = mainImgFolder + "/" + fildName;
+                                        outputImage(imageOut, bufferedImage1, url3);
+                                    }
                                 }
                             }
                         }
@@ -146,16 +157,16 @@ public class MarkMain {
      * @param width
      * @param markText
      */
-    private static void printSize(Graphics2D g, int height, int width, String markText) {
+    private static void printSize(Graphics2D g, int height, int width, String markText, int fontSize) {
         //使用绘图工具对象将水印（文字/图片）绘制到缓存图片
-        g.setFont(new Font(FONT_NAME, FONT_STYLE, FONT_SIZE));
+        g.setFont(new Font(FONT_NAME, FONT_STYLE, fontSize));
         g.setColor(SIZE_FONT_COLOR);
 
         //获取文字水印的宽度和高度值
         //文字水印宽度
-        int sizeWidth = FONT_SIZE * getTextLength(markText);
+        int sizeWidth = fontSize * getTextLength(markText);
         //文字水印高度
-        int sizeHeight = FONT_SIZE;
+        int sizeHeight = fontSize;
         //横坐标
         int x = (width - sizeWidth) / 2;
         //纵坐标
@@ -174,14 +185,14 @@ public class MarkMain {
      * @param width
      * @param markText
      */
-    private static void printCode(Graphics2D g, int height, int width, String markText) {
-        g.setFont(new Font(FONT_NAME, FONT_STYLE, FONT_SIZE));
+    private static void printCode(Graphics2D g, int height, int width, String markText, int fontSize) {
+        g.setFont(new Font(FONT_NAME, FONT_STYLE, fontSize));
         g.setColor(CODE_FONT_COLOR);
         //获取文字水印的宽度和高度值
         //文字水印宽度
-        int codeWidth = FONT_SIZE * getTextLength(markText);
+        int codeWidth = fontSize * getTextLength(markText);
         //文字水印高度
-        int codeHeight = FONT_SIZE;
+        int codeHeight = fontSize;
         //横坐标
         int codeX = width - codeWidth - codeHeight / 2 * 3;
         //纵坐标

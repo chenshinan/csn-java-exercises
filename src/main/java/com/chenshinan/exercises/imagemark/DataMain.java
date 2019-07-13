@@ -22,7 +22,7 @@ public class DataMain {
         OutputStream dataOut = null;
         OutputStream historyDataOut = null;
         OutputStream logOut = null;
-        String logs = "";
+        String logs;
         try {
             logs = IOUtils.toString(new FileInputStream(folderUrl + "/log.txt"), Charsets.UTF_8);
             System.out.println(logs);
