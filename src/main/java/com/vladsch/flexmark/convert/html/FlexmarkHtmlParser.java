@@ -23,6 +23,7 @@ import com.vladsch.flexmark.util.sequence.RepeatedCharSequence;
 import com.vladsch.flexmark.util.sequence.SubSequence;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
+import org.jsoup.parser.Tag;
 import org.jsoup.select.Elements;
 
 import java.util.*;
@@ -2020,10 +2021,21 @@ public class FlexmarkHtmlParser {
         pushState(element);
 
         Node node;
+        Boolean setHead = true;
         while ((node = next()) != null) {
             TagParam tagParam = getTagParam(node);
             if (tagParam != null) {
                 if (tagParam.tagType == TagType.TR) {
+                    if(setHead){
+                        Element x = new Element(Tag.valueOf("tr"),"");
+                        for(int i = 0;i<node.childNodeSize();i++){
+                            x.append("<th></th>");
+                        }
+                        myTable.setHeader(true);
+                        processTableRow(out, x);
+                        myTable.setHeader(false);
+                        setHead = false;
+                    }
                     Element tableRow = (Element) node;
                     Elements children = tableRow.children();
                     boolean wasHeading = myTable.getHeader();
