@@ -26,7 +26,8 @@ public class MarkMain {
     private static final Color SIZE_FONT_COLOR = Color.decode("#000000");
     private static final Color CODE_FONT_COLOR = Color.decode("#28E613");
     private static final float ALPHA = 1;
-    private static final List<String> functions = Arrays.asList(FunctionType.WATERMARK, FunctionType.SPLIT_FOLDER, FunctionType.CHECK_COUNT);
+    private static final List<String> functions = Arrays.asList(FunctionType.WATERMARK_SIZE, FunctionType.WATERMARK_CODE, FunctionType.SPLIT_FOLDER, FunctionType.CHECK_COUNT);
+    private static List<String> mainImgFolderUrls = new ArrayList<>();
 
     public static void main(String[] args) {
         String folderUrl = "/Users/chenshinan/Downloads/watermark";
@@ -59,6 +60,7 @@ public class MarkMain {
                         //生成主图文件夹
                         String mainImgFolder = outFolderStr + "/主图";
                         getFolder(mainImgFolder);
+                        mainImgFolderUrls.add(mainImgFolder);
                         int folderNum = 1;
                         List<File> fileList = Arrays.stream(imageFolder.listFiles()).sorted(Comparator.comparing(File::getName)).collect(Collectors.toList());
                         for (File file : fileList) {
@@ -77,13 +79,15 @@ public class MarkMain {
                                 Graphics2D g = bufferedImage1.createGraphics();
                                 //使用绘图工具对象将原图绘制到缓存图片对象
                                 g.drawImage(image, 0, 0, width, height, null);
-                                if (functions.contains(FunctionType.WATERMARK)) {
-                                    //如果为x说明不需要加水印
-                                    if (!imageData.getSize().equals("x")) {
-                                        //由于w/h/fs=6000/4000/200=3000/2000/100，所以fs=w/30
-                                        int fontSize = width / 30;
+                                //如果为x说明不需要加水印
+                                if (!imageData.getSize().equals("x")) {
+                                    //由于w/h/fs=6000/4000/200=3000/2000/100，所以fs=w/30
+                                    int fontSize = width / 30;
+                                    if (functions.contains(FunctionType.WATERMARK_SIZE)) {
                                         //绘制size
                                         printSize(g, height, width, imageData.getSize(), fontSize);
+                                    }
+                                    if (functions.contains(FunctionType.WATERMARK_CODE)) {
                                         //绘制code
                                         printCode(g, height, width, imageData.getCode(), fontSize);
                                     }
@@ -109,6 +113,10 @@ public class MarkMain {
                                     if (count % 9 == 1) {
                                         String url3 = mainImgFolder + "/" + fildName;
                                         outputImage(imageOut, bufferedImage1, url3);
+                                    }
+                                    //如果是某款的最后文件夹，则创建主图汇总
+                                    if (imageData.getLastImageNum()) {
+                                        copyMainFolderImage(outFolderStr);
                                     }
                                 }
                             }
@@ -212,6 +220,7 @@ public class MarkMain {
     private static Map<String, ImageData> handleData(String data) {
         Map<String, ImageData> map = new HashMap<>();
         String[] lines = data.split("\\|\\|\\|");
+        String lastImageNum = null;
         for (String line : lines) {
             ImageData imageData = new ImageData();
             line = line.trim();
@@ -223,8 +232,15 @@ public class MarkMain {
             imageData.setImageNum(imageNum.substring(1, imageNum.length() - 1));
             imageData.setSize(lineDate[1]);
             imageData.setCode(lineDate[2]);
+            imageData.setLastImageNum(false);
             map.put(imageData.getImageNum(), imageData);
+            //判断上一个imageNum与当前的imageNum是否属于同一组，若不是则更新上一个isLastImageNum=true
+            if (lastImageNum != null && !lastImageNum.split("\\.")[2].equals(imageData.getImageNum().split("\\.")[2])) {
+                map.get(lastImageNum).setLastImageNum(true);
+            }
+            lastImageNum = imageData.getImageNum();
         }
+        map.get(lastImageNum).setLastImageNum(true);
         return map;
     }
 
@@ -280,6 +296,38 @@ public class MarkMain {
                 out.close();
             } catch (IOException e) {
                 e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 复制主图到汇总文件夹
+     *
+     * @param outFolderStr
+     */
+    private static void copyMainFolderImage(String outFolderStr) {
+        //生成汇总文件夹
+        String mainImgFolderCollect = outFolderStr + "/汇总主图";
+        getFolder(mainImgFolderCollect);
+        for (String mainImgFolder : mainImgFolderUrls) {
+            File file = new File(mainImgFolder);
+            //文件名称列表
+            String[] filePath = file.list();
+            for (int i = 0; i < filePath.length; i++) {
+                File oldFile = new File(mainImgFolder + "/" + filePath[i]);
+                File newFile = new File(mainImgFolderCollect + "/" + filePath[i]);
+                FileInputStream in;
+                FileOutputStream out;
+                try {
+                    in = new FileInputStream(oldFile);
+                    out = new FileOutputStream(newFile);
+                    byte[] buffer = new byte[2097152];
+                    while ((in.read(buffer)) != -1) {
+                        out.write(buffer);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
