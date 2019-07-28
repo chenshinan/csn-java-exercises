@@ -11,6 +11,8 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -114,12 +116,12 @@ public class MarkMain {
                                         String url3 = mainImgFolder + "/" + fildName;
                                         outputImage(imageOut, bufferedImage1, url3);
                                     }
-                                    //如果是某款的最后文件夹，则创建主图汇总
-                                    if (imageData.getLastImageNum()) {
-                                        copyMainFolderImage(outFolderStr);
-                                    }
                                 }
                             }
+                        }
+                        //如果是某款的最后文件夹，则创建主图汇总
+                        if (imageData.getLastImageNum()) {
+                            copyMainFolderImage(outFolderStr);
                         }
                         LOGGER.info("完成【{}】批量上码", imageNum);
                     } else {
@@ -129,7 +131,7 @@ public class MarkMain {
 
             }
             Float time = (float) (System.currentTimeMillis() - startTime) / 1000;
-            LOGGER.info("完成所有批量上码，共计：{}张图片，耗时：{}s", count, time);
+            recordLog(folderUrl, count, time, map);
         } catch (Exception e) {
             LOGGER.error(e.getMessage());
         } finally {
@@ -218,8 +220,8 @@ public class MarkMain {
      * @return
      */
     private static Map<String, ImageData> handleData(String data) {
-        Map<String, ImageData> map = new HashMap<>();
         String[] lines = data.split("\\|\\|\\|");
+        Map<String, ImageData> map = new HashMap<>(lines.length);
         String lastImageNum = null;
         for (String line : lines) {
             ImageData imageData = new ImageData();
@@ -244,9 +246,16 @@ public class MarkMain {
         return map;
     }
 
+    /**
+     * 校验图片数量是否规范
+     *
+     * @param folder
+     * @param map
+     * @param folderUrl
+     * @throws IOException
+     */
     private static void checkFileCount(File folder, Map<String, ImageData> map, String folderUrl) throws IOException {
         LOGGER.info("开始校验文件夹图片数量，必须为9的倍数");
-        int sum = 0;
         for (File imageFolder : folder.listFiles()) {
             if (imageFolder.isDirectory()) {
                 String imageNum = imageFolder.getName();
@@ -256,7 +265,6 @@ public class MarkMain {
                     for (File file : imageFolder.listFiles()) {
                         if (file.getName().split("\\.")[1].equalsIgnoreCase("jpg")) {
                             count++;
-                            sum++;
                         }
                     }
                     if (count % 9 != 0) {
@@ -265,11 +273,6 @@ public class MarkMain {
                 }
             }
         }
-        String logs = IOUtils.toString(new FileInputStream(folderUrl + "/log.txt"), Charsets.UTF_8);
-        logs = logs.replace("{imageNum}", String.valueOf(sum));
-        OutputStream logOut = new FileOutputStream(folderUrl + "/log.txt");
-        logOut.write(logs.getBytes());
-        logOut.close();
         LOGGER.info("完成文件夹图片数量校验");
     }
 
@@ -294,6 +297,16 @@ public class MarkMain {
         if (out != null) {
             try {
                 out.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static void closeWriter(Writer writer) {
+        if (writer != null) {
+            try {
+                writer.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -330,5 +343,54 @@ public class MarkMain {
                 }
             }
         }
+        //清空主图缓存
+        mainImgFolderUrls = new ArrayList<>();
+    }
+
+    /**
+     * 生成日志记录
+     *
+     * @param folderUrl
+     * @param count
+     * @param time
+     * @param map
+     */
+    private static void recordLog(String folderUrl, Integer count, Float time, Map<String, ImageData> map) {
+        //日期
+        DateFormat df = new SimpleDateFormat("MM.dd");
+        String date = "日期" + df.format(new Date());
+        //编码列表
+        Set<String> codeList = new HashSet<>();
+        //文件夹数量
+        Integer folderCount = 0;
+        Set<String> typeList = new HashSet<>();
+
+        for (Map.Entry<String, ImageData> entry : map.entrySet()) {
+            String type = entry.getKey();
+            if (type.split("\\.").length == 4) {
+                type = (String) type.subSequence(0, type.lastIndexOf("."));
+            }
+            typeList.add(type);
+            String code = entry.getValue().getCode();
+            codeList.add(code.length() > 2 ? code.substring(2, code.length()) : code);
+            folderCount++;
+        }
+        //款数
+        Integer typeCount = typeList.size();
+        String log = date + "，共" + typeCount + "款" + folderCount + "个文件夹" + count + "张图片，耗时:" + time + "s，编号为" + codeList.stream().collect(Collectors.joining("|"));
+        OutputStream logOut = null;
+        OutputStreamWriter osw = null;
+        try {
+            logOut = new FileOutputStream(folderUrl + "/log.txt", true);
+            osw = new OutputStreamWriter(logOut, Charsets.UTF_8);
+            osw.write(log + "\n");
+            osw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            closeWriter(osw);
+            closeOut(logOut);
+        }
+        LOGGER.info("完成所有批量上码，{}", log);
     }
 }
