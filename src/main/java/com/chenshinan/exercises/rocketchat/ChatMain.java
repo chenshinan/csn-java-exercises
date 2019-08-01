@@ -29,8 +29,6 @@ public class ChatMain {
             //获取订阅
             List<Subscription> subscriptions = client.getSubscriptions().join();
             System.out.println(subscriptions);
-
-
         }
     }
 }

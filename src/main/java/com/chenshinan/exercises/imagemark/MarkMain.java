@@ -33,6 +33,8 @@ public class MarkMain {
 
     public static void main(String[] args) {
         String folderUrl = "/Users/chenshinan/Downloads/watermark";
+        List<String> imageUrlList = new ArrayList<>();
+        List<String> imageUrlSingleList = new ArrayList<>();
         File folder = new File(folderUrl);
         long startTime = System.currentTimeMillis();
         OutputStream imageOut = null;
@@ -89,9 +91,10 @@ public class MarkMain {
                                         //绘制size
                                         printSize(g, height, width, imageData.getSize(), fontSize);
                                     }
+                                    int fontCodeSize = width / 35;
                                     if (functions.contains(FunctionType.WATERMARK_CODE)) {
                                         //绘制code
-                                        printCode(g, height, width, imageData.getCode(), fontSize);
+                                        printCode(g, height, width, imageData.getCode(), fontCodeSize);
                                     }
                                 }
                                 //释放工具
@@ -113,8 +116,11 @@ public class MarkMain {
                                     }
                                     //如果是第一张则再输出到单图文件夹
                                     if (count % 9 == 1) {
-                                        String url3 = mainImgFolder + "/" + fildName;
-                                        outputImage(imageOut, bufferedImage1, url3);
+                                        String urlSingle = mainImgFolder + "/" + fildName;
+                                        outputImage(imageOut, bufferedImage1, urlSingle);
+                                        imageUrlList.add(outFolderColorStr);
+                                        imageUrlList.add(urlSingle);
+                                        imageUrlSingleList.add(urlSingle);
                                     }
                                 }
                             }
@@ -122,21 +128,37 @@ public class MarkMain {
                         //如果是某款的最后文件夹，则创建主图汇总
                         if (imageData.getLastImageNum()) {
                             copyMainFolderImage(outFolderStr);
+                            imageUrlList.addAll(imageUrlSingleList);
+                            //清空单独图表
+                            imageUrlSingleList = new ArrayList<>();
                         }
                         LOGGER.info("完成【{}】批量上码", imageNum);
                     } else {
                         LOGGER.info("没找到【{}】的数据，跳过", imageNum);
                     }
                 }
-
             }
             Float time = (float) (System.currentTimeMillis() - startTime) / 1000;
             recordLog(folderUrl, count, time, map);
+            outputImageUrl(folderUrl, imageUrlList);
         } catch (Exception e) {
             LOGGER.error(e.getMessage());
         } finally {
             closeOut(imageOut);
         }
+    }
+
+    private static void outputImageUrl(String folderUrl, List<String> imageUrlList) {
+        OutputStream output = null;
+        try {
+            output = new FileOutputStream(folderUrl + "/imageUrl.txt");
+            output.write(imageUrlList.stream().collect(Collectors.joining("\n")).getBytes());
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            closeOut(output);
+        }
+
     }
 
     /**
