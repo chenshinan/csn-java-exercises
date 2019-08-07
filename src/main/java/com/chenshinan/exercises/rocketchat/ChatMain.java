@@ -30,5 +30,10 @@ public class ChatMain {
             List<Subscription> subscriptions = client.getSubscriptions().join();
             System.out.println(subscriptions);
         }
+        try {
+            Thread.sleep(60000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

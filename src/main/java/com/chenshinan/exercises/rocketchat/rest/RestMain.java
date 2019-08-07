@@ -29,9 +29,8 @@ public class RestMain {
 
     public static void main(String[] args) {
         OkHttpClient client = new OkHttpClient.Builder()
-                .addInterceptor(new AddCookiesInterceptor()) //这部分
+                .addInterceptor(new AddCookiesInterceptor())
                 .build();
-
         //创建 Retrofit 实例
         Retrofit retrofit = new Retrofit.Builder()
                 //设置网络请求url地址
@@ -40,8 +39,6 @@ public class RestMain {
                 .addConverterFactory(ScalarsConverterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(client)
-                //设置网络请求适配器
-//                .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
                 .build();
         //创建网络请求接口实例
         RequestInterface requestInterface = retrofit.create(RequestInterface.class);
@@ -60,32 +57,35 @@ public class RestMain {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        System.out.println("获取频道列表");
-        Map<String, Object> channels = request(requestInterface.getChannelsList());
+        //获取频道列表
+        Map<String, Object> channels = request("获取频道列表", requestInterface.getChannelsList(null));
         String rid = (String) ((Map) ((List) channels.get("channels")).get(0)).get("_id");
-
-        System.out.println("发送聊天信息");
-        Map<String, Object> sendMessage = request(requestInterface.sendMessage(new SendMessage(SendMessageParam.forSendMessage(null, "from java", rid))));
+        String rname = (String) ((Map) ((List) channels.get("channels")).get(0)).get("name");
+        //发送聊天信息
+        Map<String, Object> sendMessage = request("发送聊天信息", requestInterface.sendMessage(new SendMessage(SendMessageParam.forSendMessage(null, "from java", rid))));
         String mid = (String) ((Map) sendMessage.get("message")).get("_id");
-//        System.out.println("回复聊天信息【没有效果】");
-//        Map<String, Object> replyMessage = request(requestInterface.sendMessage(new SendMessage(SendMessageParam.forSendMessage(mid, "reply java", rid))));
-        System.out.println("举报聊天信息");
-        Map<String, Object> reportMessage = request(requestInterface.reportMessage(new ReportMessage(mid, "report java")));
-
-        System.out.println("根据房间id获取所有聊天信息");
-        Map<String, Object> allMessage = request(requestInterface.getAllMessageByRid(rid));
-
-        System.out.println("创建讨论");
-        Map<String, Object> createDiscussion = request(requestInterface.createDiscussion(new Discussion(rid, "新讨论")));
-
-        System.out.println("回复聊天信息");
-        Map<String, Object> replyMessage = request(requestInterface.replyMessage(mid, new SendMessage(SendMessageParam.forSendMessage(null, "reply java", rid))));
-        String mmid = (String) ((Map) sendMessage.get("message")).get("_id");
-        System.out.println("finish");
+        //举报聊天信息
+        Map<String, Object> reportMessage = request("举报聊天信息", requestInterface.reportMessage(new ReportMessage(mid, "report java")));
+        //根据房间id获取所有聊天信息
+        Map<String, Object> allMessage = request("根据房间id获取所有聊天信息", requestInterface.getAllMessageByRid(rid));
+        //创建讨论
+        Map<String, Object> createDiscussion = request("创建讨论", requestInterface.createDiscussion(new Discussion(rid, "新讨论")));
+        //创建用户
+        Map<String, Object> createUser = request("创建用户", requestInterface.createUser(new UserCreate("cstt", "574466609@qq.com", "csn000000", "cstt")));
+        //给房间添加自定义字段
+        ChannelCustField channelCustField = new ChannelCustField();
+        channelCustField.setRoomId(rid);
+        channelCustField.setRoomName(rname);
+        Map<String, String> cusFieldMap = new HashMap<>(2);
+        cusFieldMap.put("organizationId", "1");
+        channelCustField.setCustomFields(cusFieldMap);
+        Map<String, Object> channelSetCustomFields = request("给房间添加自定义字段", requestInterface.channelSetCustomFields(channelCustField));
+        //获取频道列表，根据自定义搜索
+        Map<String, Object> channelsBySearch = request("获取频道列表，根据自定义搜索", requestInterface.getChannelsList("{ \"customFields.organizationId\": { \"$eq\": \"1\" } }"));
     }
 
-    private static Map<String, Object> request(Call<String> call) {
+    private static Map<String, Object> request(String log, Call<String> call) {
+        System.out.println(log);
         try {
             Response<String> response = call.execute();
             System.out.println(response.body());

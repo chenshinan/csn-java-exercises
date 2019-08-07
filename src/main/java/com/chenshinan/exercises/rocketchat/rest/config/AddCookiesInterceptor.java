@@ -7,8 +7,11 @@ import okhttp3.Response;
 
 import java.io.IOException;
 
+/**
+ * @author shinan.chen
+ * @since 2019/8/2
+ */
 public class AddCookiesInterceptor implements Interceptor {
-
     @Override
     public Response intercept(Chain chain) throws IOException {
         Request.Builder builder = chain.request().newBuilder();
